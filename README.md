@@ -1,3 +1,4 @@
+# WIP 
 # Discord Reaction Roleplay Bot
 
 An interactive Discord bot that creates dynamic, branching story experiences with Google's Gemini 2.0 API. Users participate by voting on story choices with emoji reactions, shaping the narrative in real time.
