@@ -120,7 +120,8 @@ def get_relevant_emojis(option_a, option_b):
 
 def emoji_to_text(emoji):
     """
-    Convert an emoji to a descriptive text based on the EMOJI_KEYWORDS mapping
+    Convert an emoji to a descriptive text that can be used in the story generation.
+    Uses a combination of predefined mappings and Unicode character analysis.
     
     Args:
         emoji (str): The emoji to convert
@@ -128,12 +129,66 @@ def emoji_to_text(emoji):
     Returns:
         str: Descriptive text for the emoji, or None if not found
     """
-    # Create reverse mapping from emoji to keyword
+    # Create reverse mapping from emoji to keyword (use existing predefined keywords)
     emoji_to_keyword = {v: k for k, v in EMOJI_KEYWORDS.items()}
     
     # Check if emoji exists in our mapping
     if emoji in emoji_to_keyword:
         return emoji_to_keyword[emoji]
+    
+    # Handle Discord custom emojis (format: <:name:id>)
+    custom_emoji_match = re.match(r'<:(.+):\d+>', emoji)
+    if custom_emoji_match:
+        # Extract the name of the custom emoji, replace underscores with spaces
+        return custom_emoji_match.group(1).replace('_', ' ')
+    
+    # Try unicode emoji description approach - get the Unicode name which usually has descriptive text
+    try:
+        import unicodedata
+        
+        # Split the emoji (might be multiple Unicode characters)
+        for char in emoji:
+            try:
+                # Get the Unicode name - often descriptive
+                name = unicodedata.name(char).lower()
+                
+                # Clean up the name - remove 'emoji' suffix and convert to a simple description
+                if "emoji" in name:
+                    name = name.replace("emoji", "").strip()
+                
+                # Replace underscores and dashes with spaces
+                name = name.replace("_", " ").replace("-", " ")
+                
+                # If it's a "face" emoji, simplify
+                if "face" in name:
+                    emotion_words = ["happy", "sad", "angry", "surprised", 
+                                    "scared", "laughing", "crying", "winking",
+                                    "thinking", "confused", "tired", "sleeping",
+                                    "cool", "nerdy", "sick", "injured", "dead",
+                                    "shocked", "crazy", "silly", "love", "kiss"]
+                    
+                    for emotion in emotion_words:
+                        if emotion in name:
+                            return emotion
+                
+                # Remove common prefixes from Unicode names
+                prefixes_to_remove = ["face with", "face", "person", "building", "house", "flag"]
+                for prefix in prefixes_to_remove:
+                    if name.startswith(prefix):
+                        name = name[len(prefix):].strip()
+                
+                # Special handling for letter/symbol emojis (like 🅰️, 🅱️, etc.)
+                if "letter" in name or "symbol" in name:
+                    continue
+                
+                # If we found a valid description, return it
+                if name and len(name) > 1:
+                    return name.strip()
+                
+            except (ValueError, TypeError):
+                continue
+    except ImportError:
+        pass
     
     # Special handling for some common emojis not in our keyword list
     special_emojis = {
@@ -146,7 +201,16 @@ def emoji_to_text(emoji):
         "🎮": "game", "🎵": "music", "🎬": "movie", "📚": "knowledge",
         "🕰️": "time", "🧩": "puzzle", "🧪": "experiment", "🪄": "magic",
         "🦸": "hero", "🧟": "zombie", "👽": "alien", "🤖": "robot",
-        "🐺": "wolf", "🦊": "fox", "🐉": "dragon", "🦁": "lion"
+        "🐺": "wolf", "🦊": "fox", "🐉": "dragon", "🦁": "lion",
+        "🌟": "star", "🌈": "rainbow", "🌊": "wave", "🌪️": "tornado",
+        "🏰": "castle", "⚔️": "sword", "🛡️": "shield", "🧙": "wizard",
+        "🔮": "crystal ball", "📜": "scroll", "🧪": "potion", "💎": "gem",
+        "🔫": "gun", "💣": "bomb", "🧨": "dynamite", "🪓": "axe",
+        "🏹": "bow", "🗡️": "dagger", "🪄": "wand", "🧬": "dna",
+        "👑": "crown", "👸": "princess", "🤴": "prince", "👻": "ghost",
+        "💀": "skull", "☠️": "death", "👹": "monster", "👺": "goblin",
+        "🧙‍♂️": "wizard", "🧙‍♀️": "witch", "🧚": "fairy", "🧜": "mermaid",
+        "🐲": "dragon", "🦄": "unicorn", "🦇": "bat", "🦂": "scorpion"
     }
     
     if emoji in special_emojis:
@@ -156,12 +220,14 @@ def emoji_to_text(emoji):
     for known_emoji, keyword in emoji_to_keyword.items():
         if emoji in known_emoji or known_emoji in emoji:
             return keyword
-            
-    # Default fallback values for emojis we can't identify
+    
+    # Generic emoji category detection
     emoji_categories = {
         "😀": "emotion", "🐶": "animal", "🍎": "food", "🏠": "place",
         "🚗": "vehicle", "👕": "clothing", "💻": "technology", "🎮": "entertainment",
-        "🏆": "achievement", "🌈": "phenomenon", "🔮": "mystical object"
+        "🏆": "achievement", "🌈": "phenomenon", "🔮": "mystical object",
+        "🌿": "plant", "🌋": "natural disaster", "🏛️": "building", "🎭": "performance",
+        "⚽": "sport", "🔧": "tool", "🎁": "gift", "💍": "jewelry", "🎨": "art"
     }
     
     # Try to match by first character to identify category
@@ -171,5 +237,13 @@ def emoji_to_text(emoji):
             if first_char == category_emoji[0]:
                 return category
     
-    # If we can't identify the emoji, return None so it can be skipped
-    return None
+    # Last resort - if it's a single character, just use a simple description
+    if len(emoji) == 1:
+        try:
+            # Use the most basic category or just "symbol" as fallback
+            return "mysterious symbol"
+        except:
+            pass
+    
+    # If nothing else works, at least make an attempt with a generic description
+    return "mysterious element"

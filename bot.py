@@ -50,14 +50,18 @@ async def roleplay(ctx, *, theme=None):
     prompt = (
         "You are an expert storyteller creating an immersive, dramatic roleplay scenario. "
         f"Generate an engaging opening scenario for a roleplay about: {theme}.\n\n"
-        "Follow these formatting rules:\n"
-        "1. Use rich, descriptive language with proper paragraph breaks for readability\n"
-        "2. Create atmosphere through sensory details and environmental descriptions\n"
-        "3. Use occasional bold or italic text for emphasis on important elements\n"
-        "4. End with exactly two distinct choices labeled as:\n\n"
-        "**A)** [first option] - Make this option distinct and meaningful\n"
-        "**B)** [second option] - Make this option clearly different from option A\n\n"
-        "Ensure the options present a meaningful choice with different possible outcomes."
+        "Follow these formatting and narrative guidelines:\n"
+        "1. **Scene Setting**: Begin with *italic text* for atmospheric descriptions that engage the senses. "
+        "Describe the environment, time of day, and initial mood.\n"
+        "2. **Character Introduction**: Use **bold text** for character names when first introduced.\n"
+        "3. **Narrative Structure**: Build tension gradually using proper paragraph breaks for pacing.\n"
+        "4. **Dialogue**: Format dialogue with quotation marks and include emotional cues, e.g., \"*I won't go in there,*\" he whispered, voice trembling.\n"
+        "5. **Important Objects/Clues**: When introducing key items or information, use *italic emphasis*.\n"
+        "6. **Action Sequences**: Use short, punchy sentences for action. Create intensity with pacing.\n"
+        "7. **End Choices**: Conclude with two distinct, meaningful choices formatted as:\n\n"
+        "**A)** [first option] - Make this option distinct and consequential\n"
+        "**B)** [second option] - Make this option clearly different with its own potential outcomes\n\n"
+        "Ensure your storytelling creates a sense of immersion, urgency, and emotional investment."
     )
     
     try:
@@ -233,21 +237,25 @@ async def continue_story(ctx, message, emoji_a, emoji_b, option_a, option_b):
     # Generate next part of the story with improved formatting instructions
     prompt = (
         f"{full_context}\n\n"
-        "Continue the story based on the chosen option, following these formatting rules:\n"
-        "1. Use rich, descriptive language with proper paragraph breaks for readability\n"
-        "2. Build on previous events with dramatic tension and atmosphere\n"
-        "3. Use occasional bold or italic text for emphasis on important elements\n"
+        "Continue the story based on the chosen option, following these advanced formatting guidelines:\n"
+        "1. **Transition**: Begin with a brief *italic* summary connecting to the previous choice.\n"
+        "2. **Consequences**: Detail the immediate effects of the choice using vivid sensory descriptions.\n"
+        "3. **Character Development**: Use **bold** for character names and show emotional/physical reactions to events.\n"
+        "4. **Dramatic Moments**: Emphasize key revelations or shocking moments with *italic* or **bold** formatting.\n"
+        "5. **Environmental Changes**: Describe how the setting evolves or responds to the characters' actions.\n"
+        "6. **Dialogue**: Format dialogue with quotation marks, including tone indicators, e.g., \"*We need to hurry,*\" she urged.\n"
+        "7. **Pacing**: Vary paragraph length – short for tension, longer for description and reflection.\n"
     )
     
     # Add custom elements if any
     if custom_elements_text:
-        prompt += f"\n4. {custom_elements_text}\n"
+        prompt += f"\n8. **Special Elements**: {custom_elements_text}\n"
     
     prompt += (
         "\nEnd with exactly two distinct choices labeled as:\n\n"
-        "**A)** [first option] - Make this option distinct and meaningful\n"
-        "**B)** [second option] - Make this option clearly different from option A\n\n"
-        "Ensure the options present a meaningful choice with different possible outcomes."
+        "**A)** [first option] - Make this option carry significant weight and consequences\n"
+        "**B)** [second option] - Make this option provide a completely different direction\n\n"
+        "Ensure each choice creates a meaningful branch in the narrative and maintains emotional investment."
     )
 
     try:
