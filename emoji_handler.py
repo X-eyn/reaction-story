@@ -110,27 +110,66 @@ def get_relevant_emojis(option_a, option_b):
                 emoji_b = EMOJI_KEYWORDS[word]
                 break
     
-    # If we couldn't find relevant emojis or both options have the same emoji
-    if not emoji_a or not emoji_b or emoji_a == emoji_b:
-        # Try to fallback to more contextual emojis
-        if "axe" in option_a_lower or "weapon" in option_a_lower:
-            emoji_a = "🪓"
-        elif "grab" in option_a_lower or "take" in option_a_lower:
-            emoji_a = "👊"
-        elif "door" in option_a_lower:
-            emoji_a = "🚪"
-        elif "window" in option_a_lower:
-            emoji_a = "🪟"
+    # Use default emojis if no matches found
+    if not emoji_a:
+        emoji_a = DEFAULT_EMOJIS[0]
+    if not emoji_b:
+        emoji_b = DEFAULT_EMOJIS[1]
         
-        if "cable" in option_b_lower or "wire" in option_b_lower:
-            emoji_b = "⚡"
-        elif "door" in option_b_lower:
-            emoji_b = "🚪"
-        elif "barricade" in option_b_lower or "block" in option_b_lower:
-            emoji_b = "🛑"
-    
-    # If we still have duplicates or missing emojis, use default
-    if not emoji_a or not emoji_b or emoji_a == emoji_b:
-        return DEFAULT_EMOJIS
-    
     return emoji_a, emoji_b
+
+def emoji_to_text(emoji):
+    """
+    Convert an emoji to a descriptive text based on the EMOJI_KEYWORDS mapping
+    
+    Args:
+        emoji (str): The emoji to convert
+        
+    Returns:
+        str: Descriptive text for the emoji, or None if not found
+    """
+    # Create reverse mapping from emoji to keyword
+    emoji_to_keyword = {v: k for k, v in EMOJI_KEYWORDS.items()}
+    
+    # Check if emoji exists in our mapping
+    if emoji in emoji_to_keyword:
+        return emoji_to_keyword[emoji]
+    
+    # Special handling for some common emojis not in our keyword list
+    special_emojis = {
+        "🔥": "fire", "💧": "water", "🌍": "earth", "💨": "air",
+        "❤️": "love", "💕": "affection", "😂": "laughter", "😊": "happiness",
+        "😢": "sadness", "😡": "anger", "😱": "fear", "🤔": "thinking",
+        "👍": "approval", "👎": "disapproval", "👏": "applause", "🙏": "prayer",
+        "💪": "strength", "🧠": "intelligence", "👁️": "vision", "👂": "hearing",
+        "💰": "wealth", "⚡": "energy", "🎭": "deception", "🎯": "accuracy",
+        "🎮": "game", "🎵": "music", "🎬": "movie", "📚": "knowledge",
+        "🕰️": "time", "🧩": "puzzle", "🧪": "experiment", "🪄": "magic",
+        "🦸": "hero", "🧟": "zombie", "👽": "alien", "🤖": "robot",
+        "🐺": "wolf", "🦊": "fox", "🐉": "dragon", "🦁": "lion"
+    }
+    
+    if emoji in special_emojis:
+        return special_emojis[emoji]
+    
+    # Try to match emoji partially (for emoji variations)
+    for known_emoji, keyword in emoji_to_keyword.items():
+        if emoji in known_emoji or known_emoji in emoji:
+            return keyword
+            
+    # Default fallback values for emojis we can't identify
+    emoji_categories = {
+        "😀": "emotion", "🐶": "animal", "🍎": "food", "🏠": "place",
+        "🚗": "vehicle", "👕": "clothing", "💻": "technology", "🎮": "entertainment",
+        "🏆": "achievement", "🌈": "phenomenon", "🔮": "mystical object"
+    }
+    
+    # Try to match by first character to identify category
+    if emoji and len(emoji) > 0:
+        first_char = emoji[0]
+        for category_emoji, category in emoji_categories.items():
+            if first_char == category_emoji[0]:
+                return category
+    
+    # If we can't identify the emoji, return None so it can be skipped
+    return None

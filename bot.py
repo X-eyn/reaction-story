@@ -6,7 +6,7 @@ import re
 from dotenv import load_dotenv
 from discord.ext import commands
 from gemini_api import generate_text
-from emoji_handler import get_relevant_emojis
+from emoji_handler import get_relevant_emojis, emoji_to_text
 from message_handler import split_message
 
 # Load environment variables
@@ -143,31 +143,64 @@ async def continue_story(ctx, message, emoji_a, emoji_b, option_a, option_b):
     voters_a = []
     voters_b = []
     
-    if reaction_a:
-        async for user in reaction_a.users():
-            if user != bot.user:
-                voters_a.append(user)
+    # Track custom emoji reactions from users
+    custom_reactions = {}
     
-    if reaction_b:
-        async for user in reaction_b.users():
-            if user != bot.user:
-                voters_b.append(user)
+    # Process all reactions on the message
+    for reaction in message.reactions:
+        # Skip the bot's own A/B option reactions
+        if str(reaction.emoji) == str(emoji_a) or str(reaction.emoji) == str(emoji_b):
+            if reaction.emoji == emoji_a:
+                async for user in reaction.users():
+                    if user != bot.user:
+                        voters_a.append(user)
+            elif reaction.emoji == emoji_b:
+                async for user in reaction.users():
+                    if user != bot.user:
+                        voters_b.append(user)
+        # Process custom user reactions
+        else:
+            users_for_emoji = []
+            async for user in reaction.users():
+                if user != bot.user:
+                    users_for_emoji.append(user)
+            
+            if users_for_emoji:  # Only add emojis that users actually reacted with
+                custom_reactions[str(reaction.emoji)] = users_for_emoji
     
-    # Determine winning option
-    if len(voters_a) + len(voters_b) == 0:
-        await ctx.send("No one voted. The story ends here...")
+    # Check if there are any votes or custom reactions
+    total_interactions = len(voters_a) + len(voters_b) + sum(len(users) for users in custom_reactions.values())
+    
+    # End story only if there are no interactions at all
+    if total_interactions == 0:
+        await ctx.send("No one interacted with the story. The story ends here...")
         if channel_id in story_history:
             del story_history[channel_id]
         return
     
-    if len(voters_a) > len(voters_b):
+    # Determine winning option (if no votes for A or B, generate a neutral continuation)
+    if len(voters_a) + len(voters_b) == 0:
+        # No votes for main options, but custom reactions exist
+        winning_option = "Neither option was chosen, but the story continues..."
+        winning_emoji = "🔄"
+        winning_voters = []
+        
+        # For story continuity, choose a random option
+        import random
+        if random.choice([True, False]):
+            chosen_option = f"**A)** {option_a}"
+        else:
+            chosen_option = f"**B)** {option_b}"
+    elif len(voters_a) > len(voters_b):
         winning_option = f"**A)** {option_a}"
         winning_emoji = emoji_a
         winning_voters = voters_a
+        chosen_option = winning_option
     else:
         winning_option = f"**B)** {option_b}"
         winning_emoji = emoji_b
         winning_voters = voters_b
+        chosen_option = winning_option
     
     # Award karma to users who voted for the winning option
     for user in winning_voters:
@@ -176,7 +209,7 @@ async def continue_story(ctx, message, emoji_a, emoji_b, option_a, option_b):
     
     # Add chosen option to history
     if channel_id in story_history and story_history[channel_id]:
-        story_history[channel_id][-1]["chosen_option"] = winning_option
+        story_history[channel_id][-1]["chosen_option"] = chosen_option
     
     # Create full story context for AI
     full_context = ""
@@ -185,6 +218,18 @@ async def continue_story(ctx, message, emoji_a, emoji_b, option_a, option_b):
         if segment["chosen_option"]:
             full_context += f"**The group chose: {segment['chosen_option']}**\n\n"
     
+    # Prepare custom elements text from user reactions
+    custom_elements_text = ""
+    if custom_reactions:
+        custom_elements = []
+        for emoji, users in custom_reactions.items():
+            emoji_desc = emoji_to_text(emoji)
+            if emoji_desc:
+                custom_elements.append(f"{emoji_desc} (added by {len(users)} {'user' if len(users) == 1 else 'users'})")
+        
+        if custom_elements:
+            custom_elements_text = "Additionally, incorporate these elements into the next part of the story in a meaningful way: " + ", ".join(custom_elements) + "."
+    
     # Generate next part of the story with improved formatting instructions
     prompt = (
         f"{full_context}\n\n"
@@ -192,7 +237,14 @@ async def continue_story(ctx, message, emoji_a, emoji_b, option_a, option_b):
         "1. Use rich, descriptive language with proper paragraph breaks for readability\n"
         "2. Build on previous events with dramatic tension and atmosphere\n"
         "3. Use occasional bold or italic text for emphasis on important elements\n"
-        "4. End with exactly two distinct choices labeled as:\n\n"
+    )
+    
+    # Add custom elements if any
+    if custom_elements_text:
+        prompt += f"\n4. {custom_elements_text}\n"
+    
+    prompt += (
+        "\nEnd with exactly two distinct choices labeled as:\n\n"
         "**A)** [first option] - Make this option distinct and meaningful\n"
         "**B)** [second option] - Make this option clearly different from option A\n\n"
         "Ensure the options present a meaningful choice with different possible outcomes."
@@ -237,6 +289,13 @@ async def continue_story(ctx, message, emoji_a, emoji_b, option_a, option_b):
         
         # Let users know which option won
         await ctx.send(f"Option {winning_emoji} won with {len(winning_voters)} votes!\n**{winning_option}**")
+        
+        # If there were custom reactions, acknowledge them
+        if custom_reactions:
+            custom_elements = [emoji_to_text(emoji) for emoji in custom_reactions.keys() if emoji_to_text(emoji)]
+            if custom_elements:
+                elements_text = ", ".join(custom_elements)
+                await ctx.send(f"*The story will also incorporate: {elements_text}*")
         
         # Split and send the new story segment
         messages = split_message(next_segment)
